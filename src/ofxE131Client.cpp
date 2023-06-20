@@ -7,28 +7,19 @@
 #include <ifaddrs.h>
 #endif
 
-void ofxE131Client::setup(string host, string mCast)
+void ofxE131Client::setup(std::string addr, bool bCast)
 {
-	ipAddress = host;
+    ipAddress = addr;
+    bMcast = bCast;
     setLengthFlags();
     setPriority(200); // Default top priority
     setUniverse(1);
-    setMulticastAddress(mCast);
     connectUDP();
 }
 
 void ofxE131Client::update()
 {
 	sendDMX();
-}
-
-void ofxE131Client::setMulticastAddress(std::string addr)
-{
-    /*
-        The range for multicast addresses is from
-        224.0.0.0 to 239.255.255.255
-    */
-    mCast = addr;
 }
 
 void ofxE131Client::setUniverse(int universe)
@@ -130,17 +121,21 @@ void ofxE131Client::setLengthFlags()
 
 void ofxE131Client::connectUDP()
 {
-    delete[] pMcast;
-	pMcast = new char[mCast.length() + 1];
-	strcpy(pMcast, mCast.c_str());
+	delete[] pAddr;
+    pAddr = new char[ipAddress.length() + 1];
+	strcpy(pAddr, ipAddress.c_str());
 
-	udp.Create();
+    udp.Create();
 	udp.SetEnableBroadcast(false);
 	udp.SetReuseAddress(true);
 	udp.SetNonBlocking(true);
 	udp.SetSendBufferSize(4096);
 	udp.SetTimeoutSend(1);
-	udp.ConnectMcast(pMcast, destPort);
+    if (bMcast) {
+        udp.ConnectMcast(pAddr, destPort);
+    } else {
+        udp.Connect(pAddr, destPort);
+    }
 }
 
 void ofxE131Client::sendDMX()

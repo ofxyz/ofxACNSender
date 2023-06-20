@@ -18,10 +18,9 @@
 class ofxE131Client {
 public:
 
-	void setup(string host, string mCast = "239.255.0.1");
+	void setup(std::string addr, bool mCast = false);
 	void update();
 
-	void setMulticastAddress(std::string addr);
 	void setUniverse(int universe);
 	void setChannel(int channel, u_char value, int universe = 1);
 	void setChannels(int startChannel, u_char* values, size_t size, int universe = 1);
@@ -81,15 +80,20 @@ private:
 		char(512)   // DMX payload (all 512 channels)
 	}};
 	
+	/*
+		The range for multicast addresses is from
+		224.0.0.0 to 239.255.255.255
+	*/
+	bool bMcast = false;
 	bool loggedException = false;
 
 	int packet_length = 638; // Length when all 512 DMX channels are sent
 	int destPort = 5568;     // Default port for sACN protocol!
 	int priority = 100;
 	
-	char* pMcast;
-	std::string mCast;
+	char* pAddr;
 	std::string ipAddress;
+
 	ofxUDPManager udp;
 
 	std::map<int, UniverseData> universePackets;
