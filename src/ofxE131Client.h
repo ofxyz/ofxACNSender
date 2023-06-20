@@ -17,34 +17,22 @@
 
 class ofxE131Client {
 public:
-	//ofxE131Client(std::string ipAddress);
-	
-	void setup(string host = "2.255.255.255", string mask = "255.0.0.0");
-	
+
+	void setup(string host, string mCast = "239.255.0.1");
+	void update();
+
+	void setMulticastAddress(std::string addr);
+	void setUniverse(int universe);
 	void setChannel(int channel, u_char value, int universe = 1);
 	void setChannels(int startChannel, u_char* values, size_t size, int universe = 1);
-	
-	void update();
-	void enableAutoSending(bool iEnable); // Whether or not data is automatically
-	// sent each update frame
-	void setFramerate(float iFPS); // Data sending framerate, by default this is 30 fps
-	
-	void setUseFramerate(bool iEnable) { useFramerate = iEnable; }
-	
 	void setPriority(int priority);
-	void setCid(const std::vector<char> cid);
-	void setSourceName(std::string name);
-	bool isConnected() { return _isConnected; }
 	
 private:
 	void connectUDP();
 	void sendDMX();
-	void setUniverse(int universe);
 	void setLengthFlags();
 	
-	bool shouldSendData(float iTimeSinceDataSent);
-	
-	// Data structure to store payload and sequenece num for each universe
+	// Data structure to store payload and sequence num for each universe
 	struct UniverseData {
 		char universeSequenceNum;
 		std::array<char, 512> payload;
@@ -77,8 +65,8 @@ private:
 		
 		0x64,       // DATA PRIORITY, 0-200, default of 100 (0x64)
 		0x00, 0x00, // RESERVED, transmitters send 0, receivers ignore
-		0x00,       // Sequence number to detect dupliate or out of order packets
-		0x00, // Options flag, bit 7 = preview data, bit 6 = stream terminated
+		0x00,       // Sequence number to detect duplicate or out of order packets
+		0x00,       // Options flag, bit 7 = preview data, bit 6 = stream terminated
 		0x00, 0x00, // UNIVERSE number
 		
 		// DMP Layer
@@ -93,30 +81,16 @@ private:
 		char(512)   // DMX payload (all 512 channels)
 	}};
 	
+	bool loggedException = false;
+
 	int packet_length = 638; // Length when all 512 DMX channels are sent
 	int destPort = 5568;     // Default port for sACN protocol!
 	int priority = 100;
 	
-	// Framerate-lock sending or send as fast as we can
-	bool useFramerate = false;
-	bool autoSendingEnabled = true;
-	
-	float dataSendInterval = 0;
-	float lastDataSendTime = 0;
-	float framerate = 30.0f;
-	
-	bool _isConnected = false;
-	
-	float timeSinceDataSent = 0;
-	clock_t timer;
-	
-	float elapsedTime = 0;
-	bool udpSetup = false;
-	
-	bool loggedException = false;
-	
+	char* pMcast;
+	std::string mCast;
 	std::string ipAddress;
 	ofxUDPManager udp;
-	
+
 	std::map<int, UniverseData> universePackets;
 };

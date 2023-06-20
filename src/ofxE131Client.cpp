@@ -7,41 +7,40 @@
 #include <ifaddrs.h>
 #endif
 
-void ofxE131Client::setup(string host, string mask)
+void ofxE131Client::setup(string host, string mCast)
 {
 	ipAddress = host;
-    // Universally Unique Identifier generated at:  https://www.uuidgenerator.net/
-    const vector<char> cid = { char(0x71), char(0x2d), char(0xfb), char(0x4c), char(0xe6), char(0xa3), char(0x4f), char(0xeb), char(0xaa), char(0x99), char(0xe5), char(0x94), char(0x84), char(0xb4), char(0x5b), char(0x1d) };
-
-    setSourceName("Sosolimited device");
-    setCid(cid);
     setLengthFlags();
     setPriority(200); // Default top priority
     setUniverse(1);
-
-    // Set default data send interval to be equivalent to 30 Hz
-    if (framerate > 0) {
-        dataSendInterval = 1.0f / framerate;
-    }
-
-    // Create a timer for timing cycling and data sending
-    timer = clock();
-	
-    // Connect to UDP endpoint
+    setMulticastAddress(mCast);
     connectUDP();
 }
 
-void ofxE131Client::connectUDP()
+void ofxE131Client::update()
 {
-    if (!udpSetup) {
-		udp.Create();
-		udp.SetEnableBroadcast(false);
-		udp.SetReuseAddress(true);
-		udp.SetNonBlocking(true);
-		udp.SetSendBufferSize(4096);
-		udp.SetTimeoutSend(1);
-		udp.ConnectMcast((char*)"239.255.0.1", destPort);
-    }
+	sendDMX();
+}
+
+void ofxE131Client::setMulticastAddress(std::string addr)
+{
+    /*
+        The range for multicast addresses is from
+        224.0.0.0 to 239.255.255.255
+    */
+    mCast = addr;
+}
+
+void ofxE131Client::setUniverse(int universe)
+{
+	// Set header with appropriate universe, high and low byte
+	try {
+		sac_packet.at(113) = universe >> 8; // Grabs high byte
+		sac_packet.at(114) = universe; // Just the low byte
+	}
+	catch (std::exception& e) {
+		cout << "set universe" << e.what() << endl;
+	}
 }
 
 void ofxE131Client::setChannel(int channel, u_char value, int universe)
@@ -80,18 +79,6 @@ void ofxE131Client::setChannels(int startChannel, u_char* values, size_t size, i
     }
 }
 
-void ofxE131Client::setUniverse(int universe)
-{
-    // Set header with appropriate universe, high and low byte
-    try {
-        sac_packet.at(113) = universe >> 8; // Grabs high byte
-        sac_packet.at(114) = universe; // Just the low byte
-    }
-    catch (std::exception &e) {
-        cout << "set universe" << endl;
-    }
-}
-
 void ofxE131Client::setPriority(int priority)
 {
     if ((priority >= 0) && (priority <= 200)) {
@@ -100,41 +87,6 @@ void ofxE131Client::setPriority(int priority)
     else {
 		ofLog() << "Priority must be between 0-200";
     }
-}
-
-// This should remain the same per physical device
-void ofxE131Client::setCid(const std::vector<char> cid)
-{
-    int length = cid.size();
-
-    if (length != 16) {
-        ofLog() << "CID must be of length 16!";
-        return;
-    }
-
-    int start_index = 22;
-    for (int i = 0; i < 16; i++) {
-        sac_packet.at(start_index + i) = cid[i];
-    }
-}
-
-// UTF-8 encoded string, null terminated
-void ofxE131Client::setSourceName(std::string name)
-{
-    char *cstr = new char[name.length() + 1];
-    std::strcpy(cstr, name.c_str());
-
-    int max_length = strlen(cstr);
-
-    // Field is 64 bytes, with a null terminator
-    if (max_length > 63) {
-        max_length = 63;
-    };
-
-    for (int i = 0; i < max_length; i++) {
-        sac_packet.at(44 + i) = cstr[i];
-    }
-    sac_packet.at(107) = '\n';
 }
 
 void ofxE131Client::setLengthFlags()
@@ -151,7 +103,7 @@ void ofxE131Client::setLengthFlags()
     // Set length for
     short val = 0x026e; // Index 637-15 = 622 (0x026e)
     char lowByte = 0xff & val; // Get the lower byte
-    char highByte = (0x7 << 4) | (val >> 8); // bitshift so 0x7 is in the top 4 bits
+    char highByte = (0x7 << 4) | (val >> 8); // bit shift so 0x7 is in the top 4 bits
 
     // Set length for Root Layer (RLP)
 
@@ -160,7 +112,7 @@ void ofxE131Client::setLengthFlags()
 
     val = 0x0258; // Index 637-37 = 600 (0x0258)
     lowByte = 0xff & val; // Get the lower byte
-    highByte = (0x7 << 4) | (val >> 8); // bitshift so 0x7 is in the top 4 bits
+    highByte = (0x7 << 4) | (val >> 8); // bit shift so 0x7 is in the top 4 bits
 
     // Set length for Framing Layer
 
@@ -169,37 +121,26 @@ void ofxE131Client::setLengthFlags()
 
     val = 0x020B; // Index 637-114 = 523 (0x020B)
     lowByte = 0xff & val; // Get the lower byte
-    highByte = (0x7 << 4) | (val >> 8); // bitshift so 0x7 is in the top 4 bits
+    highByte = (0x7 << 4) | (val >> 8); // bit shift so 0x7 is in the top 4 bits
 
     // Set length for DMP Layer
     sac_packet.at(115) = highByte;
     sac_packet.at(116) = lowByte;
 }
 
-// Set our data sending framerate
-void ofxE131Client::setFramerate(float iFPS)
+void ofxE131Client::connectUDP()
 {
-    if (iFPS > 0) {
-        dataSendInterval = 1.0 / iFPS;
-    }
-    framerate = iFPS;
-}
+    delete[] pMcast;
+	pMcast = new char[mCast.length() + 1];
+	strcpy(pMcast, mCast.c_str());
 
-// Check if we should send data, according to our
-// data framerate
-bool ofxE131Client::shouldSendData(float iTime)
-{
-    if (!useFramerate) {
-        return true;
-    }
-    else {
-        float diff = iTime - lastDataSendTime;
-
-        if ((diff >= dataSendInterval) && (framerate > 0)) {
-            return true;
-        }
-    }
-    return false;
+	udp.Create();
+	udp.SetEnableBroadcast(false);
+	udp.SetReuseAddress(true);
+	udp.SetNonBlocking(true);
+	udp.SetSendBufferSize(4096);
+	udp.SetTimeoutSend(1);
+	udp.ConnectMcast(pMcast, destPort);
 }
 
 void ofxE131Client::sendDMX()
@@ -219,43 +160,15 @@ void ofxE131Client::sendDMX()
 
         // Handle exceptions
         try {
-            sac_packet.at(111) = dataPacket.universeSequenceNum;
-			int xxx = universe >> 8 & 0x00ff;
-			int yyy = universe & 0x00ff;
-			//udp.ConnectMcast((char*)("239.255." + ofToString(xxx) + "." + ofToString(yyy)).c_str(), destPort);
-			udp.SendAll(sac_packet.data(), packet_length);
-			//udp.Close();
-//            _socket->send(asio::buffer(sac_packet, packet_length));
-            dataPacket.universeSequenceNum = dataPacket.universeSequenceNum + 1;
+            sac_packet.at(111) = dataPacket.universeSequenceNum;		
+            udp.SendAll(sac_packet.data(), packet_length);
+			dataPacket.universeSequenceNum = dataPacket.universeSequenceNum + 1;
         }
         catch (std::exception &e) {
             if (!loggedException) {
-                ofLog() << "Could not send sACN data - are you plugged into the device?";
+                ofLog() << "Could not send sACN data - are you plugged into the device? " << e.what();
                 loggedException = true;
             }
         }
     }
-    // Increment current universe counter.
-}
-
-// Update all strands, send data if it's time
-// Update any test cycles
-void ofxE131Client::update()
-{
-    // Use system time for timing purposes
-    clock_t thisTime = clock();
-    float timeDiff = (thisTime - timer) / 100000.0f;
-
-    elapsedTime += timeDiff;
-
-    float iTime = elapsedTime;
-
-    // If we've enabled auto data sending, send data if
-    // enough time has passed according to our data send interval
-    if (autoSendingEnabled && shouldSendData(iTime)) {
-        lastDataSendTime = iTime;
-        sendDMX();
-    }
-
-    timer = clock();
 }

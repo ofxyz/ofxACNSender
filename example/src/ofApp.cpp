@@ -2,16 +2,20 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-	node.setup("192.168.1.22", "255.255.255.0");
-	node.setUseFramerate(false);
-	node.setSourceName("ofxE131ClientExample");
+	node.setup("192.168.0.100");
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	vector<u_char> data = {static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+	vector<u_char> data = {
 		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255)};
+		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+
+		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+	};
 	node.setChannels(1, data.data(), data.size(), 1);
 	node.update();
 }

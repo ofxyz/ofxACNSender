@@ -1,0 +1,9 @@
+#example
+example/.vs
+example/addons
+example/bin
+example/obj
+icon.rc
+*.sln
+*.vcxproj
+*.vcxproj.*

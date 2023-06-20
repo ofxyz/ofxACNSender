@@ -23,5 +23,5 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
 
 		ofxE131Client node;
-    ofEventListeners listeners;
+		ofEventListeners listeners;
 };
