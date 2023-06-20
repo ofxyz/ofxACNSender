@@ -24,4 +24,6 @@ class ofApp : public ofBaseApp{
 
 		ofxE131Client node;
 		ofEventListeners listeners;
+
+		int pixelCount = 94*4; // 376 * 3 = 1128
 };

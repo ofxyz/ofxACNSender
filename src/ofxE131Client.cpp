@@ -60,7 +60,7 @@ void ofxE131Client::setChannels(int startChannel, u_char* values, size_t size, i
             char(0),
             emptyPayload
         };
-
+        
         universePackets[universe] = data;
     }
 

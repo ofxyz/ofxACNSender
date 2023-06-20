@@ -7,17 +7,31 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	vector<u_char> data = {
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
+	vector<u_char> data;
 
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-		static_cast<unsigned char>(round(ofRandom(0, 1)) * 255),
-	};
-	node.setChannels(1, data.data(), data.size(), 1);
-	node.update();
+	int startUniverse = 1;
+	int startChannel = 1;
+	int nextChannel = 1;
+
+	for (int i = 0; i < pixelCount*3; i++) {
+		// Add a random pixel R, G, B
+		data.push_back(static_cast<unsigned char>(round(ofRandom(0, 1)) * 255));
+		nextChannel += 1;
+
+		if (data.size() == 512) {
+			node.setChannels(startChannel, data.data(), data.size(), startUniverse);
+			//node.update();
+			startChannel = 1;
+			nextChannel = 1;
+			startUniverse++;
+			data.clear();
+		}
+	}
+	if (data.size() > 0) {
+		node.setChannels(startChannel, data.data(), data.size(), startUniverse);
+		node.update();
+	}
+	
 }
 
 //--------------------------------------------------------------
