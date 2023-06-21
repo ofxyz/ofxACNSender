@@ -70,6 +70,52 @@ void ofxACNSender::setChannels(int startChannel, u_char* values, size_t size, in
     }
 }
 
+void ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels dataIn)
+{
+	vector<u_char> data;
+	int i = 0;
+	while (i < dataIn.size()) {
+		data.push_back(dataIn[i]);
+		i++;
+	}
+
+    /*
+	for (int x = 0; x < dataIn.getWidth(); x++) {
+		for (int y = 0; y < dataIn.getHeight(); y++) {
+			ofColor p = dataIn.getColor(x, y);
+			data.push_back(static_cast<unsigned char>(p.r));
+			data.push_back(static_cast<unsigned char>(p.g));
+			data.push_back(static_cast<unsigned char>(p.b));
+		}
+	}
+    */
+
+    setUniverses(startUniverse, startChannel, data);
+}
+
+void ofxACNSender::setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn)
+{
+	int endChannel = startChannel;
+	vector<u_char> data;
+
+	for (auto& value : dataIn) {
+		data.push_back(value);
+		endChannel++;
+		if (endChannel == 511) {
+			setChannels(startChannel, data.data(), data.size(), startUniverse);
+			startChannel = 1;
+			endChannel = 1;
+			startUniverse++;
+			data.clear();
+		}
+	}
+
+	// Process the remaining values
+	if (data.size() > 0) {
+		setChannels(startChannel, data.data(), data.size(), startUniverse);
+	}
+}
+
 void ofxACNSender::setPriority(int priority)
 {
     if ((priority >= 0) && (priority <= 200)) {
@@ -152,7 +198,8 @@ void ofxACNSender::sendDMX()
         for (int i = 0; i < payload.size(); i++) {
             sac_packet.at(126 + i) = payload.at(i);
         }
-
+        // sts::copy ?
+		
         // Handle exceptions
         try {
             sac_packet.at(111) = dataPacket.universeSequenceNum;		

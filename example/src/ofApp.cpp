@@ -2,39 +2,44 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+	ofSetVerticalSync(true);
+	ofSetFrameRate(30);
+
 	//node.setup("192.168.0.100", false);
 	node.setup("239.255.0.1", true);
+
+	dataFbo.allocate(pixelCount, 1, GL_RGB);
+	last = ofGetElapsedTimeMillis();
+	col.setHsb(0, 255, 255);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	vector<u_char> data;
 
-	int startUniverse = 1;
-	int startChannel = 1;
-	int endChannel = 1;
+	dataFbo.begin();
+	ofClear(0);
+	col.setHue(ofGetFrameNum() % 256);
+	ofSetColor(col);
+	ofDrawRectangle(0, 0, dataFbo.getWidth(), 1);
+	ofSetColor(0, 0, 0);
+	ofDrawRectangle(ofGetFrameNum() % (int)dataFbo.getWidth(), 0, 1, 1);
+	dataFbo.end();
 
-	for (int i = 0; i < (pixelCount*3); i++) {
-		data.push_back(static_cast<unsigned char>(round(ofRandom(0, 1)) * 155));
-		endChannel++;
-		if (endChannel == 511) {
-			node.setChannels(startChannel, data.data(), data.size(), startUniverse);
-			startChannel = 1;
-			endChannel = 1;
-			startUniverse++;
-			data.clear();
-		}
-	}
-	if (data.size() > 0) {
-		node.setChannels(startChannel, data.data(), data.size(), startUniverse);
-	}
-	
+	ofPixels pix;
+	dataFbo.readToPixels(pix);
+
+	// Should return value endUnivers and endChannel
+	// ofVec2f endUniverseChannel = ...
+	node.setUniverses(1, 1, pix);
 	node.update();
+
 }
+
+
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-
+	dataFbo.draw(0, 0, ofGetWidth(), ofGetHeight());
 }
 
 //--------------------------------------------------------------

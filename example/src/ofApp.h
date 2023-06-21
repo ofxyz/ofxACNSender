@@ -25,5 +25,8 @@ class ofApp : public ofBaseApp{
 		ofxACNSender node;
 		ofEventListeners listeners;
 
-		int pixelCount = 94*4; // 376 * 3 = 1128
+		int pixelCount = 94 * 4; // 376 * 3 = 1128
+		unsigned long last;
+		ofFbo dataFbo;
+		ofColor col;
 };

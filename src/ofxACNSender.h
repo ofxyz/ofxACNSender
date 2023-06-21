@@ -26,6 +26,8 @@ public:
 	void setUniverse(int universe);
 	void setChannel(int channel, u_char value, int universe = 1);
 	void setChannels(int startChannel, u_char* values, size_t size, int universe = 1);
+	void setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn);
+	void setUniverses(int startUniverse, int startChannel, ofPixels dataIn);
 	void setPriority(int priority);
 	
 private:
