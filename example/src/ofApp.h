@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxE131Client.h"
+#include "ofxACNSender.h"
 
 class ofApp : public ofBaseApp{
 
@@ -22,7 +22,7 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 
-		ofxE131Client node;
+		ofxACNSender node;
 		ofEventListeners listeners;
 
 		int pixelCount = 94*4; // 376 * 3 = 1128

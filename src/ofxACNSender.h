@@ -1,3 +1,5 @@
+// ofxACNSender.h
+// Based on:
 //
 //	ofxE131Client.h
 //
@@ -15,7 +17,7 @@
 #include "ofMain.h"
 #include "ofxUDPManager.h"
 
-class ofxE131Client {
+class ofxACNSender {
 public:
 
 	void setup(std::string addr, bool mCast = false);

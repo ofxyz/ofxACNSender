@@ -1,4 +1,4 @@
-#include "ofxE131Client.h"
+#include "ofxACNSender.h"
 
 #ifdef WIN32
 #include <iphlpapi.h>
@@ -7,7 +7,7 @@
 #include <ifaddrs.h>
 #endif
 
-void ofxE131Client::setup(std::string addr, bool bCast)
+void ofxACNSender::setup(std::string addr, bool bCast)
 {
     ipAddress = addr;
     bMcast = bCast;
@@ -17,12 +17,12 @@ void ofxE131Client::setup(std::string addr, bool bCast)
     connectUDP();
 }
 
-void ofxE131Client::update()
+void ofxACNSender::update()
 {
 	sendDMX();
 }
 
-void ofxE131Client::setUniverse(int universe)
+void ofxACNSender::setUniverse(int universe)
 {
 	// Set header with appropriate universe, high and low byte
 	try {
@@ -34,13 +34,13 @@ void ofxE131Client::setUniverse(int universe)
 	}
 }
 
-void ofxE131Client::setChannel(int channel, u_char value, int universe)
+void ofxACNSender::setChannel(int channel, u_char value, int universe)
 {
 	setChannels(channel, &value, 1, universe);
 }
 
 
-void ofxE131Client::setChannels(int startChannel, u_char* values, size_t size, int universe)
+void ofxACNSender::setChannels(int startChannel, u_char* values, size_t size, int universe)
 {
     // Check if universe is already in our map
     if (universePackets.count(universe) == 0) {
@@ -70,7 +70,7 @@ void ofxE131Client::setChannels(int startChannel, u_char* values, size_t size, i
     }
 }
 
-void ofxE131Client::setPriority(int priority)
+void ofxACNSender::setPriority(int priority)
 {
     if ((priority >= 0) && (priority <= 200)) {
         sac_packet.at(108) = char(priority);
@@ -80,7 +80,7 @@ void ofxE131Client::setPriority(int priority)
     }
 }
 
-void ofxE131Client::setLengthFlags()
+void ofxACNSender::setLengthFlags()
 {
     // 16-bit field with the PDU (Protocol Data Unit) length
     // encoded in the lower 12 bits
@@ -119,7 +119,7 @@ void ofxE131Client::setLengthFlags()
     sac_packet.at(116) = lowByte;
 }
 
-void ofxE131Client::connectUDP()
+void ofxACNSender::connectUDP()
 {
 	delete[] pAddr;
     pAddr = new char[ipAddress.length() + 1];
@@ -138,7 +138,7 @@ void ofxE131Client::connectUDP()
     }
 }
 
-void ofxE131Client::sendDMX()
+void ofxACNSender::sendDMX()
 {
     // Send for all universes
     for (auto &pair : universePackets) {
