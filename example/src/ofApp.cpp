@@ -28,9 +28,11 @@ void ofApp::update(){
 	ofPixels pix;
 	dataFbo.readToPixels(pix);
 
-	// Should return value endUnivers and endChannel
-	// ofVec2f endUniverseChannel = ...
-	node.setUniverses(1, 1, pix);
+	std::pair<int, int> StartUC = { 1,1 };
+	StartUC = node.setUniverses(StartUC.first, StartUC.second, pix);
+	StartUC = node.setUniverses(StartUC.first, StartUC.second, pix);
+	StartUC = node.setUniverses(StartUC.first, StartUC.second, pix);
+	StartUC = node.setUniverses(StartUC.first, StartUC.second, pix);
 	node.update();
 
 }

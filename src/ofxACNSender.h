@@ -19,22 +19,24 @@
 
 class ofxACNSender {
 public:
-
 	void setup(std::string addr, bool mCast = false);
 	void update();
-
-	void setUniverse(int universe);
-	void setChannel(int channel, u_char value, int universe = 1);
-	void setChannels(int startChannel, u_char* values, size_t size, int universe = 1);
-	void setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn);
-	void setUniverses(int startUniverse, int startChannel, ofPixels dataIn);
+	
+	// Return next Universe/Channel
+	std::pair<int, int> setChannel(int universe, int channel, u_char value);
+	std::pair<int, int> setChannels(int universe, int startChannel, u_char* values, size_t size);
+	std::pair<int, int> setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn);
+	std::pair<int, int> setUniverses(int startUniverse, int startChannel, ofPixels dataIn);
+	
 	void setPriority(int priority);
 	
 private:
+
 	void connectUDP();
 	void sendDMX();
 	void setLengthFlags();
-	
+	void setPacketUniverse(int universe);
+
 	// Data structure to store payload and sequence num for each universe
 	struct UniverseData {
 		char universeSequenceNum;

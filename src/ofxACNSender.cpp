@@ -13,7 +13,7 @@ void ofxACNSender::setup(std::string addr, bool bCast)
     bMcast = bCast;
     setLengthFlags();
     setPriority(200); // Default top priority
-    setUniverse(1);
+    setPacketUniverse(1);
     connectUDP();
 }
 
@@ -22,7 +22,7 @@ void ofxACNSender::update()
 	sendDMX();
 }
 
-void ofxACNSender::setUniverse(int universe)
+void ofxACNSender::setPacketUniverse(int universe)
 {
 	// Set header with appropriate universe, high and low byte
 	try {
@@ -34,14 +34,19 @@ void ofxACNSender::setUniverse(int universe)
 	}
 }
 
-void ofxACNSender::setChannel(int channel, u_char value, int universe)
+std::pair<int, int> ofxACNSender::setChannel(int universe, int channel, u_char value)
 {
-	setChannels(channel, &value, 1, universe);
+	return setChannels(universe, channel, &value, 1);
 }
 
-
-void ofxACNSender::setChannels(int startChannel, u_char* values, size_t size, int universe)
+std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_char* values, size_t size)
 {
+	// Expect values between 1 - 512, inclusive
+    if ((startChannel < 1) || (startChannel > 512)) {
+        ofLog() << "Channel must be between 1 and 512 for DMX protocol. " << startChannel;
+        return std::make_pair(0, 0);
+	}
+
     // Check if universe is already in our map
     if (universePackets.count(universe) == 0) {
         std::array<char, 512> emptyPayload = { { char(512) } };
@@ -55,22 +60,29 @@ void ofxACNSender::setChannels(int startChannel, u_char* values, size_t size, in
         universePackets[universe] = data;
     }
 
-    setUniverse(universe);
+    setPacketUniverse(universe);
 
-    // Expect values between 1 - 512, inclusive
-    if ((startChannel > 0) && (startChannel <= 512)) {
+	auto& dataPacket = universePackets.at(universe);
+    
+    int channel = startChannel;
+	while (channel < startChannel + size && channel <= 512) {
+		dataPacket.payload.at(channel - 1) = (char)*(values + channel - startChannel);
+        channel++;
+	}
 
-        auto &dataPacket = universePackets.at(universe);
-		for(int channel = startChannel ; channel < startChannel+size && channel <= 512; channel++){
-			dataPacket.payload.at(channel - 1) = (char)*(values+channel-startChannel);
-		}
-    }
-    else {
-        ofLog() << "Channel must be between 1 and 512 for DMX protocol. " << startChannel;
-    }
+	if ((startChannel + size - 1) > 512) { // Expect data to fit in channel
+		ofLog() << "Too much data for channel ... loss of data." << startChannel;
+	}
+
+	if (channel > 512) {
+	    universe++;
+	    channel -= 512;
+	}
+
+	return std::make_pair(universe, channel);
 }
 
-void ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels dataIn)
+std::pair<int, int> ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels dataIn)
 {
 	vector<u_char> data;
 	int i = 0;
@@ -79,7 +91,7 @@ void ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels da
 		i++;
 	}
 
-    /*
+    /* mapping...
 	for (int x = 0; x < dataIn.getWidth(); x++) {
 		for (int y = 0; y < dataIn.getHeight(); y++) {
 			ofColor p = dataIn.getColor(x, y);
@@ -90,19 +102,21 @@ void ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels da
 	}
     */
 
-    setUniverses(startUniverse, startChannel, data);
+    return setUniverses(startUniverse, startChannel, data);
+    //return setUniverses(startUniverse, startChannel, dataIn.getData(), dataIn.size());
 }
 
-void ofxACNSender::setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn)
+std::pair<int, int> ofxACNSender::setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn)
 {
 	int endChannel = startChannel;
 	vector<u_char> data;
+    std::pair<int, int> returnVal;
 
 	for (auto& value : dataIn) {
 		data.push_back(value);
 		endChannel++;
 		if (endChannel == 511) {
-			setChannels(startChannel, data.data(), data.size(), startUniverse);
+            returnVal = setChannels(startUniverse, startChannel, data.data(), data.size());
 			startChannel = 1;
 			endChannel = 1;
 			startUniverse++;
@@ -112,8 +126,10 @@ void ofxACNSender::setUniverses(int startUniverse, int startChannel, vector<u_ch
 
 	// Process the remaining values
 	if (data.size() > 0) {
-		setChannels(startChannel, data.data(), data.size(), startUniverse);
+        returnVal = setChannels(startUniverse, startChannel, data.data(), data.size());
 	}
+
+    return returnVal;
 }
 
 void ofxACNSender::setPriority(int priority)
@@ -192,7 +208,7 @@ void ofxACNSender::sendDMX()
         auto &dataPacket = universePackets.at(universe);
         auto payload = dataPacket.payload;
 
-        setUniverse(universe);
+        setPacketUniverse(universe);
 
         // TODO: Probably a better way to do this.
         for (int i = 0; i < payload.size(); i++) {
