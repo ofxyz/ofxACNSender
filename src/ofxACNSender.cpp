@@ -19,34 +19,58 @@ void ofxACNSender::setup(std::string addr, bool bCast)
 
 void ofxACNSender::update()
 {
-	sendDMX();
+    sendDMX();
 }
 
 void ofxACNSender::setPacketUniverse(int universe)
 {
-	// Set header with appropriate universe, high and low byte
-	try {
-		sac_packet.at(113) = universe >> 8; // Grabs high byte
-		sac_packet.at(114) = universe; // Just the low byte
-	}
-	catch (std::exception& e) {
-		cout << "set universe" << e.what() << endl;
-	}
+    // Set header with appropriate universe, high and low byte
+    try {
+        sac_packet.at(113) = universe >> 8; // Grabs high byte
+        sac_packet.at(114) = universe; // Just the low byte
+    }
+    catch (std::exception& e) {
+        cout << "set universe" << e.what() << endl;
+    }
 }
 
 std::pair<int, int> ofxACNSender::setChannel(int universe, int channel, u_char value)
 {
-	return setChannels(universe, channel, &value, 1);
+    return setChannels(universe, channel, &value, 1);
 }
 
 std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_char* values, size_t size)
 {
-	// Expect values between 1 - 512, inclusive
-    if ((startChannel < 1) || (startChannel > 512)) {
-        ofLog() << "Channel must be between 1 and 512 for DMX protocol. " << startChannel;
-        return std::make_pair(0, 0);
-	}
+    int channel = startChannel;
+    int packetSize = size;
+    int channelOffset = 0;
+    while (packetSize > 0)
+    {
+        createNewUniverse(universe);
+        setPacketUniverse(universe);
 
+        auto& dataPacket = universePackets.at(universe);
+
+        while (channel < startChannel + size && channel <= 510) {
+            dataPacket.payload.at(channel - 1) = (char)*(values + (channelOffset+channel )- startChannel);
+            channel++;
+            packetSize--;
+        }
+        if (packetSize > 0)
+        {
+            channelOffset = size - packetSize;
+            startChannel = 1;
+            channel = 1;
+            size = packetSize;
+            universe++;
+        }
+    }
+
+    return std::make_pair(universe, channel);
+}
+
+void ofxACNSender::createNewUniverse(int universe)
+{
     // Check if universe is already in our map
     if (universePackets.count(universe) == 0) {
         std::array<char, 512> emptyPayload = { { char(512) } };
@@ -56,80 +80,14 @@ std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_
             char(0),
             emptyPayload
         };
-        
+
         universePackets[universe] = data;
     }
-
-    setPacketUniverse(universe);
-
-	auto& dataPacket = universePackets.at(universe);
-    
-    int channel = startChannel;
-	while (channel < startChannel + size && channel <= 512) {
-		dataPacket.payload.at(channel - 1) = (char)*(values + channel - startChannel);
-        channel++;
-	}
-
-	if ((startChannel + size - 1) > 512) { // Expect data to fit in channel
-		ofLog() << "Too much data for channel ... loss of data." << startChannel;
-	}
-
-	if (channel > 512) {
-	    universe++;
-	    channel -= 512;
-	}
-
-	return std::make_pair(universe, channel);
 }
 
-std::pair<int, int> ofxACNSender::setUniverses(int startUniverse, int startChannel, ofPixels dataIn)
+std::pair<int, int> ofxACNSender::setChannels(int startUniverse, int startChannel, ofPixels dataIn)
 {
-	vector<u_char> data;
-	int i = 0;
-	while (i < dataIn.size()) {
-		data.push_back(dataIn[i]);
-		i++;
-	}
-
-    /* mapping...
-	for (int x = 0; x < dataIn.getWidth(); x++) {
-		for (int y = 0; y < dataIn.getHeight(); y++) {
-			ofColor p = dataIn.getColor(x, y);
-			data.push_back(static_cast<unsigned char>(p.r));
-			data.push_back(static_cast<unsigned char>(p.g));
-			data.push_back(static_cast<unsigned char>(p.b));
-		}
-	}
-    */
-
-    return setUniverses(startUniverse, startChannel, data);
-    //return setUniverses(startUniverse, startChannel, dataIn.getData(), dataIn.size());
-}
-
-std::pair<int, int> ofxACNSender::setUniverses(int startUniverse, int startChannel, vector<u_char> dataIn)
-{
-	int endChannel = startChannel;
-	vector<u_char> data;
-    std::pair<int, int> returnVal;
-
-	for (auto& value : dataIn) {
-		data.push_back(value);
-		endChannel++;
-		if (endChannel == 511) {
-            returnVal = setChannels(startUniverse, startChannel, data.data(), data.size());
-			startChannel = 1;
-			endChannel = 1;
-			startUniverse++;
-			data.clear();
-		}
-	}
-
-	// Process the remaining values
-	if (data.size() > 0) {
-        returnVal = setChannels(startUniverse, startChannel, data.data(), data.size());
-	}
-
-    return returnVal;
+    return setChannels(startUniverse, startChannel, dataIn.getData(), dataIn.size());
 }
 
 void ofxACNSender::setPriority(int priority)
@@ -138,7 +96,7 @@ void ofxACNSender::setPriority(int priority)
         sac_packet.at(108) = char(priority);
     }
     else {
-		ofLog() << "Priority must be between 0-200";
+        ofLog() << "Priority must be between 0-200";
     }
 }
 
@@ -183,16 +141,16 @@ void ofxACNSender::setLengthFlags()
 
 void ofxACNSender::connectUDP()
 {
-	delete[] pAddr;
+    delete[] pAddr;
     pAddr = new char[ipAddress.length() + 1];
-	strcpy(pAddr, ipAddress.c_str());
+    strcpy(pAddr, ipAddress.c_str());
 
     udp.Create();
-	udp.SetEnableBroadcast(false);
-	udp.SetReuseAddress(true);
-	udp.SetNonBlocking(true);
-	udp.SetSendBufferSize(4096);
-	udp.SetTimeoutSend(1);
+    udp.SetEnableBroadcast(false);
+    udp.SetReuseAddress(true);
+    udp.SetNonBlocking(true);
+    udp.SetSendBufferSize(4096);
+    udp.SetTimeoutSend(1);
     if (bMcast) {
         udp.ConnectMcast(pAddr, destPort);
     } else {
@@ -209,18 +167,13 @@ void ofxACNSender::sendDMX()
         auto payload = dataPacket.payload;
 
         setPacketUniverse(universe);
-
-        // TODO: Probably a better way to do this.
-        for (int i = 0; i < payload.size(); i++) {
-            sac_packet.at(126 + i) = payload.at(i);
-        }
-        // sts::copy ?
-		
+        memcpy(&sac_packet.at(126), payload.data(), payload.size());
+ 
         // Handle exceptions
         try {
-            sac_packet.at(111) = dataPacket.universeSequenceNum;		
+            sac_packet.at(111) = dataPacket.universeSequenceNum;        
             udp.SendAll(sac_packet.data(), packet_length);
-			dataPacket.universeSequenceNum = dataPacket.universeSequenceNum + 1;
+            dataPacket.universeSequenceNum = dataPacket.universeSequenceNum + 1;
         }
         catch (std::exception &e) {
             if (!loggedException) {
