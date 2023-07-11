@@ -69,6 +69,13 @@ std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_
     return std::make_pair(universe, channel);
 }
 
+std::pair<int, int> ofxACNSender::setPixel(int startUniverse, int startChannel, ofColor col) {
+    // RGB
+    std::pair<int, int> nextChannel = setChannel(startUniverse, startChannel, col.r);
+    nextChannel = setChannel(nextChannel.first, nextChannel.second, col.g);
+    return setChannel(nextChannel.first, nextChannel.second, col.b);
+}
+
 void ofxACNSender::createNewUniverse(int universe)
 {
     // Check if universe is already in our map

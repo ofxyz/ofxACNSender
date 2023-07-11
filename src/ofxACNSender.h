@@ -25,6 +25,7 @@ public:
     std::pair<int, int> setChannel(int universe, int channel, u_char value);
     std::pair<int, int> setChannels(int universe, int startChannel, u_char* values, size_t size);
     std::pair<int, int> setChannels(int startUniverse, int startChannel, ofPixels dataIn);
+    std::pair<int, int> setPixel(int startUniverse, int startChannel, ofColor col);
     
     void setPriority(int priority);
 
