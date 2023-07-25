@@ -7,6 +7,9 @@ void ofApp::setup(){
 
     //node.setup("192.168.0.100", false);
     node.setup("239.255.0.1", true);
+    
+    // float Gamma value, and the max Colour Value (0-255) for each channel.
+    node.SetGammaValues(2.5, 255,255,255); 
 
     dataFbo.allocate(pixelCount, 1, GL_RGB);
     last = ofGetElapsedTimeMillis();
