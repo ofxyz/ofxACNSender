@@ -201,7 +201,7 @@ void ofxACNSender::connectUDP()
 	strcpy(pAddr, ipAddress.c_str());
 
 	udp.Create();
-	udp.SetEnableBroadcast(false);
+	udp.SetEnableBroadcast(bMcast);
 	udp.SetReuseAddress(true);
 	udp.SetNonBlocking(true);
 	udp.SetSendBufferSize(4096);
