@@ -45,6 +45,7 @@ std::pair<int, int> ofxACNSender::setChannel(int universe, int channel, u_char v
 
 std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_char* values, size_t size)
 {
+	int totalSize = size;
 	int channel = startChannel;
 	int packetSize = size;
 	int channelOffset = 0;
@@ -56,13 +57,14 @@ std::pair<int, int> ofxACNSender::setChannels(int universe, int startChannel, u_
 		auto& dataPacket = universePackets.at(universe);
 
 		while (channel < startChannel + size && channel <= 510) {
-			dataPacket.payload.at(channel - 1) = (char)*(values + (channelOffset + channel) - startChannel);
+			char value = (char)*(values + (channelOffset + channel) - startChannel);
+			dataPacket.payload.at(channel - 1) = value;
 			channel++;
 			packetSize--;
 		}
 		if (packetSize > 0)
 		{
-			channelOffset = size - packetSize;
+			channelOffset = totalSize - packetSize;
 			startChannel = 1;
 			channel = 1;
 			size = packetSize;
